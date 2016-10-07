@@ -1,0 +1,12 @@
+{% extends 'layout.html' %}
+{% block title %}HackRPI{% endblock %}
+{% block content %}
+
+<h5>Please enter the email you used for HackRPI registration</h5>
+
+<form action="/login" method="post">
+    <p><input type='email' name=username>
+    <p><input type=submit value=Login>
+</form>
+
+{% endblock %}

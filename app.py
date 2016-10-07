@@ -1,47 +1,79 @@
-from flask import Flask, jsonify, render_template, request
-from flask.ext.login import LoginManager, UserMixin, login_required
+from flask import Flask, jsonify, render_template, request, redirect, abort
+from flask.ext.login import LoginManager, UserMixin, login_required, login_user, logout_user
+
 import os
+import ConfigParser
 from pymongo import MongoClient
 import json
 
-app = Flask(__name__)
+config = ConfigParser.ConfigParser()
+config.read('dbConfig.cfg')
+mogoUri =  config.get('Development', 'url')
+
+# flask-login
 login_manager = LoginManager()
 login_manager.init_app(app)
+login_manager.login_view = "login"
+
+#database Login
 
 class User(UserMixin):
-    #Init mongo database here
-    
 
-    def __init__(self, username, password):
-        self.id = username
-        self.password = password
+    def __init__(self, id):
+        self.id = id
+        self.name = "user" + str(id)
 
-    #Need to re-write to deal with mongo database
-    @classmethod
-    def get(cls,id):
-        return cls.user_database.get(id)
+    def __repr__(self):
+        return "%d/%s/%s" % (self.id, self.name, self.password)
 
-#Play around with this
-@login_manager.request_loader
-def load_user(request):
-    token = request.headers.get('Authorization')
-    if token is None:
-        token = request.args.get('token')
 
-    if token is not None:
-        username,password = token.split(":") # naive token
-        user_entry = User.get(username)
-        if (user_entry is not None):
-            user = User(user_entry[0],user_entry[1])
-            if (user.password == password):
-                return user
-    return None
+# some protected url
+@app.route('/')
+def home():
+    return render_template('index.html')
 
-#TODO make Home page
-#TODO make login form/page
-#TODO make redirect
-#TODO make collection for handling
+
+@app.route('/cool')
+@login_required
+def home():
+    return Response("Hello World!")
+
+# somewhere to login
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        if password == username + "_secret":
+            id = username.split('user')[1]
+            user = User(id)
+            login_user(user)
+            return {message: 'User Known'}, 200
+        else:
+            return abort(401)
+    else:
+        return render_template('login.html')
+
+
+# somewhere to logout
+@app.route("/logout")
+@login_required
+def logout():
+    logout_user()
+    return Response('<p>Logged out</p>')
+
+
+# handle login failed
+@app.errorhandler(401)
+def page_not_found(e):
+    return Response('<p>Login failed</p>')
+
+
+# callback to reload the user object
+@login_manager.user_loader
+def load_user(userid):
+    return User(userid)
+
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=5005)
-    # Use g.user to get current user from flask-login
+    app.run()

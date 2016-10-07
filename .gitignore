@@ -1,2 +1,8 @@
 #Virtual Environment stuff
 env/*
+*.cfg
+#Back-end testing notebooks
+*.ipynb
+
+#Python Compliles
+*.pyc
