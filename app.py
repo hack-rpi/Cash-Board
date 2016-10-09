@@ -5,6 +5,7 @@ import os
 import ConfigParser
 from pymongo import MongoClient
 import json
+import util/mongoCalls as MC
 
 config = ConfigParser.ConfigParser()
 config.read('dbConfig.cfg')
@@ -16,6 +17,9 @@ login_manager.init_app(app)
 login_manager.login_view = "login"
 
 #database Login
+maxSevSelDelay = 1
+client = MongoClient(mogoUri, serverSelectionTimeoutMS=maxSevSelDelay)
+
 
 class User(UserMixin):
 
@@ -43,12 +47,12 @@ def home():
 def login():
     if request.method == 'POST':
         username = request.form['username']
-        password = request.form['password']
-        if password == username + "_secret":
-            id = username.split('user')[1]
+        valid, data = MC.checkUser()
+        if valid:
+            id = data['_id']
             user = User(id)
             login_user(user)
-            return {message: 'User Known'}, 200
+            return {message: 'User Known', userInfo: data}, 200
         else:
             return abort(401)
     else:
